@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content%}
+{% for eve in object_list %}
+<p>{{ eve }}</p>
+{% endfor %}
+
+<table class="table">
+  <thead class="thead-light">
+    <tr>
+        <th scope="col">#</th>
+        {% for eve in object_list %}
+              <th scope="col">{{eve.title}}</th>
+     {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1</th>
+              {% for eve in object_list %}
+            <td>{{eve.person}}</td>
+
+     {% endfor %}
+
+<!--      <td>Mark</td>-->
+<!--      <td>Otto</td>-->
+<!--      <td>@mdo</td>-->
+<!--    </tr>-->
+<!--    <tr>-->
+<!--      <th scope="row">2</th>-->
+<!--      <td>Jacob</td>-->
+<!--      <td>Thornton</td>-->
+<!--      <td>@fat</td>-->
+<!--    </tr>-->
+<!--    <tr>-->
+<!--      <th scope="row">3</th>-->
+<!--      <td>Larry</td>-->
+<!--      <td>the Bird</td>-->
+<!--      <td>@twitter</td>-->
+<!--    </tr>-->
+  </tbody>
+</table>
+{% endblock %}

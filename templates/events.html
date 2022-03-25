@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content%}
+<ul>
+    {% for event in object_list %}
+    <li><a class="nav-link" href="{% url 'event_detail' pk=event.pk %}">{{ event.title }}</a>
+</li>
+    {% endfor %}
+</ul>
+{% endblock %}
