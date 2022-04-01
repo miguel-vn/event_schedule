@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
 {% block content%}
+<h1 class="display-6">{{ event.title }}</h1>
+<h6>{{ event.start_date }} - {{ event.end_date }}</h6>
+<a href="{% url 'events' %}">Назад к списку эвентов</a>
+<br><br>
 {{ table_content | safe }}
 {% endblock %}
