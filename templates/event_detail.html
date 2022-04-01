@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content%}
-<h1 class="display-6">{{ event.title }}</h1>
-<h6>{{ event.start_date }} - {{ event.end_date }}</h6>
-<a href="{% url 'events' %}">Назад к списку эвентов</a>
+<div class="row">
+    <div class="col">
+        <h1 class="display-6">{{ event.title }}</h1>
+        <h6>{{ event.start_date }} - {{ event.end_date }}</h6>
+        <a href="{% url 'events' %}">Назад к списку эвентов</a>
+    </div>
+    <div class="col">
+        <a href="{% url 'download' pk=event.pk %}">Скачать расписание волонтеров</a>
+    </div>
+</div>
 <br><br>
 {{ table_content | safe }}
 {% endblock %}

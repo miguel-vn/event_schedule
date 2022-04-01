@@ -1,11 +1,16 @@
+import os
+from zipfile import ZipFile
+
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
+from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy, path, reverse
+from django.urls import reverse_lazy
 from django.views.generic import ListView
 
-from schedule_app.models import Event, ActivityOnEvent
+from adentro_schedule import settings
+from schedule_app.models import Event, ActivityOnEvent, Person
 
 
 class EventsList(ListView):
@@ -29,6 +34,41 @@ class BaseOperations(LoginRequiredMixin):
     login_url = reverse_lazy('login')
 
 
+def download(request, pk):
+    files_to_zip = {}
+    date_format = '%Y-%m-%d'
+    time_format = '%H:%M:%S'
+    for person in ActivityOnEvent.objects.filter(event__pk=pk).values('person').distinct():
+        person = Person.objects.get(pk=person['person'])
+
+        activities = ActivityOnEvent.objects.filter(event__pk=pk,
+                                                    person__pk=person.pk) \
+            .order_by('start_dt', 'end_dt')
+        data = []
+        for activity in activities:
+            data.append({'Subject': activity.activity.name,
+                         'Start Date': activity.start_dt.strftime(date_format),
+                         'Start Time': activity.start_dt.strftime(time_format),
+                         'End Date': activity.end_dt.strftime(date_format),
+                         'End Time': activity.end_dt.strftime(time_format),
+                         'Description': activity.activity.description})
+
+        filename = f'{person.last_name} {person.first_name}.csv'
+        files_to_zip[filename] = pd.DataFrame(data, dtype=str)
+        data.clear()
+
+    archive_path = os.path.join(settings.MEDIA_ROOT, f'{Event.objects.get(pk=pk).title}_расписание.zip')
+
+    with ZipFile(archive_path, 'w') as zip_file:
+        for file in files_to_zip:
+            zip_file.writestr(file, files_to_zip[file].to_csv(index=False, header=True))
+
+    if os.path.exists(archive_path):
+        response = FileResponse(open(archive_path, 'rb'))
+        return response
+    raise Http404
+
+
 def show_schedule(request, pk):
     objs = ActivityOnEvent.objects.filter(event__pk=pk).order_by('start_dt', 'end_dt')
     data = []
@@ -38,7 +78,7 @@ def show_schedule(request, pk):
                     'end_dt': activity.end_dt,
                     'duration': (activity.end_dt - activity.start_dt).seconds // 60,
                     'activity': activity.activity.name,
-                    'persons': [f"{person.first_name} {person.last_name}" for person in activity.person.all()],
+                    'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()],
                     'need_peoples': activity.activity.need_peoples}
 
         activity_pk[activity.activity.name] = activity.pk
