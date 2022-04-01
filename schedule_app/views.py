@@ -5,7 +5,7 @@ import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse, Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, reverse
 from django.urls import reverse_lazy
 from django.views.generic import ListView
 
@@ -76,10 +76,11 @@ def show_schedule(request, pk):
     for activity in objs:
         row_data = {'start_dt': activity.start_dt,
                     'end_dt': activity.end_dt,
-                    'duration': (activity.end_dt - activity.start_dt).seconds // 60,
+                    'time_coef': activity.activity.category.time_coefficient,
                     'activity': activity.activity.name,
                     'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()],
-                    'need_peoples': activity.activity.need_peoples}
+                    'need_peoples': activity.activity.need_peoples,
+                    'activity_pk': activity.pk}
 
         activity_pk[activity.activity.name] = activity.pk
 
@@ -97,43 +98,51 @@ def show_schedule(request, pk):
         if need == current:
             return f'Заполнено ({msg})'
         diff = need - current
-        return f'Требуется еще {diff} ({msg})'
+        admin_url = reverse('admin:schedule_app_activityonevent_change', args=(value['activity_pk'],))
+
+        return f'<a href="{admin_url}" target="_blank">Требуется еще {diff} ({msg})</a>'
 
     def date_transform(value):
         start = value['start_dt']
         end = value['end_dt']
+        coef = value['time_coef']
         duration = (end - start).seconds // 60
-        if duration > 60:
-            h = duration // 60
-            m = duration % 60
-            duration = f"{h} ч. {m} мин."
-        else:
-            duration = f"{duration} мин."
+        duration_with_coef = int(duration * coef)
 
-        return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration})"
+        duration = human_readable_time(duration)
+        duration_with_coef = human_readable_time(duration_with_coef)
+        return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
+
+    def human_readable_time(value):
+        if value > 60:
+            h = value // 60
+            m = value % 60
+            value = f"{h} ч. {m} мин."
+        else:
+            value = f"{value} мин."
+        return value
 
     def highlight(s):
         return "background: #00FF00" if s == 'Участвует' else None
 
-    df['need_peoples'] = df[['need_peoples', 'num_peoples']].apply(need_peoples_transform, axis=1)
-    df['start_dt'] = df[['start_dt', 'end_dt']].apply(date_transform, axis=1)
+    df['need_peoples'] = df[['need_peoples', 'num_peoples', 'activity_pk']].apply(need_peoples_transform, axis=1)
+    df['start_dt'] = df[['start_dt', 'end_dt', 'time_coef']].apply(date_transform, axis=1)
 
     df.drop(columns=['num_peoples'], inplace=True)
     df = df.explode('persons').reset_index(drop=True)
     df['values'] = 1
-    df = df.pivot_table(values='values', index='persons', columns=['activity', 'start_dt', 'need_peoples'],
+    df = df.pivot_table(values='values', index='persons', columns=['start_dt', 'activity','need_peoples'],
                         fill_value=0).astype('int8')
     df = df.applymap(lambda elem: 'Участвует' if elem == 1 else 'Доступен')
 
     table_styles = [{'selector': 'th.col_heading', 'props': 'text-align: center;'},
-                    {'selector': 'th.col_heading.level0', 'props': 'font-size: 1.5em;'}]
+                    {'selector': 'th.col_heading.level1', 'props': 'font-size: 1.5em;'}]
 
     for i, col in enumerate(df.columns):
         if 'Требуется еще' in col[2]:
-            # admin_url = reverse('admin:schedule_app_activityonevent_change', args=(1,))
             table_styles.append({'selector': f'th.col_heading.level2.col{i}', 'props': 'background: #FFD700;'})
 
-    df.columns.set_names(['Активность', 'Время', 'Наполнение'], inplace=True)
+    df.columns.set_names(['Время', 'Активность','Наполнение'], inplace=True)
     df.index.set_names([''], inplace=True)
     df = df.style.applymap(highlight)
 
