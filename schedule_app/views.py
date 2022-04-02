@@ -70,7 +70,10 @@ def download(request, pk):
 
 
 def show_schedule(request, pk):
-    objs = ActivityOnEvent.objects.filter(event__pk=pk).order_by('start_dt', 'end_dt')
+    objs = ActivityOnEvent.objects.filter(event__pk=pk,
+                                          activity__activity_type__name='volunteer_schedule')\
+        .order_by('start_dt', 'end_dt')
+
     data = []
     activity_pk = {}
     for activity in objs:
