@@ -43,7 +43,7 @@ def check_excluded_categories(cleaned_data, person):
         raise ValidationError({'person': f'{person.first_name} не изволит работать с этой категорией активностей.'})
 
 
-def check_intersections(cleaned_data, person):
+def check_intersections(cleaned_data, person, existing_instance):
     Range = namedtuple('Range', ['start', 'end'])
     start_dt = cleaned_data.get('start_dt')
     end_dt = cleaned_data.get('end_dt')
@@ -55,13 +55,13 @@ def check_intersections(cleaned_data, person):
         r2 = Range(start=act.start_dt, end=act.end_dt)
         if r1.start > r2.end or r1.end < r2.start:
             break
-        print(start_dt, end_dt, act.start_dt, act.end_dt)
+
         latest_start = max(r1.start, r2.start)
         earliest_end = min(r1.end, r2.end)
         delta = ((earliest_end - latest_start).seconds // 60) % 60 + 1
 
         overlap = max(0, delta)
-        if overlap > 0:
+        if overlap > 0 and existing_instance != act and existing_instance.pk != act.pk:
             act_detail = f'{act.activity.name} ({act.start_dt.strftime("%H:%M:%S")} - ' \
                          f'{act.end_dt.strftime("%H:%M:%S")})'
             raise ValidationError({
@@ -86,10 +86,8 @@ class ActivityOnEventForm(ModelForm):
     def clean(self):
         super(ActivityOnEventForm, self).clean()
         persons = self.cleaned_data.get('person')
-
         for p in persons:
             check_excluded_categories(self.cleaned_data, p)
-
-            check_intersections(self.cleaned_data, p)
+            check_intersections(self.cleaned_data, p, self.instance)
 
         return self.cleaned_data

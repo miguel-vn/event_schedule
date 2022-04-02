@@ -116,5 +116,4 @@ class ActivityOnEvent(models.Model):
             return None
 
     def __str__(self):
-        return f'{self.activity.name} ({self.start_dt.date()} {self.start_dt.time()} - ' \
-               f'{self.end_dt.date()} {self.end_dt.time()})'
+        return f'{self.activity.name} ({self.start_dt} - {self.end_dt})'
