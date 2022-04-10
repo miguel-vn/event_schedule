@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ event.title }} ({{ event.start_date }} - {{ event.end_date }})
+{% endblock %}
+
+{% block content%}
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <a href="{% url 'events' %}">Назад к списку эвентов</a>
+            <h1 class="display-6">{{ event.title }}</h1>
+            <h6>{{ event.start_date }} - {{ event.end_date }}</h6>
+        </div>
+        <div class="col">
+            <a href="{% url 'download' pk=event.pk %}">Скачать расписание волонтеров</a>
+        </div>
+    </div>
+</div>
+<br>
+<ul class="nav nav-tabs justify-content-center">
+    <li class="nav-item">
+        <a class="nav-link {% if current_page == 'volunteer_schedule' %}active{% endif %}" aria-current="page"
+           href="{% url 'volunteer_schedule' pk=event.pk %}">Волонтерское расписание</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_page == 'official_schedule' %}active{% endif %}" aria-current="page"
+           href="{% url 'official_schedule' pk=event.pk %}">Официальное расписание</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if current_page == 'other_schedule' %}active{% endif %}" aria-current="page"
+           href="{% url 'other_schedule' pk=event.pk %}">Прочее расписание</a>
+    </li>
+</ul>
+<div class="container">
+    {% if table_content %}
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">Название</th>
+            <th scope="col">Начало</th>
+            <th scope="col">Конец</th>
+            <th scope="col">Участники</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in table_content %}
+        <tr>
+            <th scope="row">{{ row.activity }}</th>
+            <td>{{ row.start_dt }}</td>
+            <td>{{ row.end_dt }}</td>
+            <td>
+                <ul>
+                    {% for person in row.persons %}
+                    <li>{{ person }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="container"><h2>Расписание отсутствует</h2></div>
+    {% endif %}
+</div>
+{% endblock %}

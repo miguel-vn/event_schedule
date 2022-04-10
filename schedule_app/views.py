@@ -116,7 +116,8 @@ def show_official_schedule(request, pk):
 
         data.append(row_data)
 
-    return render(request, '../templates/event_detail.html', response.as_dict())
+    response.content = data
+    return render(request, '../templates/other_schedule.html', response.as_dict())
 
 
 def show_other_schedule(request, pk):
@@ -128,7 +129,17 @@ def show_other_schedule(request, pk):
     if not objs:
         return render(request, '../templates/event_detail.html', response.as_dict())
 
-    return render(request, '../templates/event_detail.html', response.as_dict())
+    data = []
+    for activity in objs:
+        row_data = {'start_dt': activity.start_dt,
+                    'end_dt': activity.end_dt,
+                    'activity': activity.activity.name,
+                    'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()]}
+
+        data.append(row_data)
+
+    response.content = data
+    return render(request, '../templates/other_schedule.html', response.as_dict())
 
 
 def show_volunteer_schedule(request, pk):
