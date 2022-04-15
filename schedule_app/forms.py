@@ -1,10 +1,10 @@
 import datetime
-from collections import namedtuple
 
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
 from schedule_app import models
+from schedule_app.utils import is_intersects
 
 
 class CategoryForm(ModelForm):
@@ -44,24 +44,13 @@ def check_excluded_categories(cleaned_data, person):
 
 
 def check_intersections(cleaned_data, person, existing_instance):
-    Range = namedtuple('Range', ['start', 'end'])
     start_dt = cleaned_data.get('start_dt')
     end_dt = cleaned_data.get('end_dt')
 
     activities = models.ActivityOnEvent.objects.filter(event=cleaned_data.get('event'),
                                                        person=person)
     for act in activities:
-        r1 = Range(start=start_dt, end=end_dt)
-        r2 = Range(start=act.start_dt, end=act.end_dt)
-        if r1.start > r2.end or r1.end < r2.start:
-            break
-
-        latest_start = max(r1.start, r2.start)
-        earliest_end = min(r1.end, r2.end)
-        delta = ((earliest_end - latest_start).seconds // 60) % 60 + 1
-
-        overlap = max(0, delta)
-        if overlap > 0 and existing_instance != act and existing_instance.pk != act.pk:
+        if is_intersects(start_dt, end_dt, act, existing_instance):
             act_detail = f'{act.activity.name} ({act.start_dt.strftime("%H:%M:%S")} - ' \
                          f'{act.end_dt.strftime("%H:%M:%S")})'
             raise ValidationError({

@@ -32,7 +32,36 @@
            href="{% url 'other_schedule' pk=event.pk %}">Прочее расписание</a>
     </li>
 </ul>
-<div class="d-flex flex-nowrap">
-    {{ table_content | safe }}
+<div class="container">
+    {% if table_content %}
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">Название</th>
+            <th scope="col">Начало</th>
+            <th scope="col">Конец</th>
+            <th scope="col">Участники</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in table_content %}
+        <tr>
+            <th scope="row">{{ row.activity }}</th>
+            <td>{{ row.start_dt }}</td>
+            <td>{{ row.end_dt }}</td>
+            <td>
+                <ul>
+                    {% for person in row.persons %}
+                    <li>{{ person }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="container"><h2>Расписание отсутствует</h2></div>
+    {% endif %}
 </div>
 {% endblock %}

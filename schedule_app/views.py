@@ -5,12 +5,17 @@ import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.http import FileResponse, Http404
-from django.shortcuts import redirect, render, reverse
+from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import ListView
 
 from adentro_schedule import settings
 from schedule_app.models import Event, ActivityOnEvent, Person
+from schedule_app.utils import (highlight,
+                                date_transform,
+                                need_peoples_transform,
+                                Act, is_intersects,
+                                replace_person_status)
 
 
 class EventsList(ListView):
@@ -69,10 +74,83 @@ def download(request, pk):
     raise Http404
 
 
-def show_schedule(request, pk):
+class ScheduleResponse:
+    empty_schedule_message = '<div class="container"><h2>Расписание отсутствует</h2></div>'
+
+    def __init__(self, current_page_name, event_pk, content=None):
+        assert current_page_name in ('official_schedule', 'other_schedule', 'volunteer_schedule')
+
+        self.current_page_name = current_page_name
+        self.event = Event.objects.get(pk=event_pk)
+        self.__content = content
+
+    @property
+    def content(self):
+        return self.__content if self.__content else self.empty_schedule_message
+
+    @content.setter
+    def content(self, value):
+        self.__content = value
+
+    def as_dict(self):
+        return {'table_content': self.content,
+                'current_page': self.current_page_name,
+                'event': self.event}
+
+
+def show_official_schedule(request, pk):
     objs = ActivityOnEvent.objects.filter(event__pk=pk,
-                                          activity__activity_type__name='volunteer_schedule')\
+                                          activity__activity_type__name='official_schedule') \
         .order_by('start_dt', 'end_dt')
+
+    response = ScheduleResponse(current_page_name='official_schedule', event_pk=pk)
+    if not objs:
+        return render(request, '../templates/event_detail.html', response.as_dict())
+
+    data = []
+    for activity in objs:
+        row_data = {'start_dt': activity.start_dt,
+                    'end_dt': activity.end_dt,
+                    'activity': activity.activity.name,
+                    'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()]}
+
+        data.append(row_data)
+
+    response.content = data
+    return render(request, '../templates/other_schedule.html', response.as_dict())
+
+
+def show_other_schedule(request, pk):
+    objs = ActivityOnEvent.objects.filter(event__pk=pk,
+                                          activity__activity_type__name='other_schedule') \
+        .order_by('start_dt', 'end_dt')
+    response = ScheduleResponse(current_page_name='other_schedule', event_pk=pk)
+
+    if not objs:
+        return render(request, '../templates/event_detail.html', response.as_dict())
+
+    data = []
+    for activity in objs:
+        row_data = {'start_dt': activity.start_dt,
+                    'end_dt': activity.end_dt,
+                    'activity': activity.activity.name,
+                    'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()]}
+
+        data.append(row_data)
+
+    response.content = data
+    return render(request, '../templates/other_schedule.html', response.as_dict())
+
+
+def show_volunteer_schedule(request, pk):
+    objs = ActivityOnEvent.objects.filter(event__pk=pk,
+                                          activity__activity_type__name='volunteer_schedule') \
+        .order_by('start_dt', 'end_dt')
+
+    response = ScheduleResponse(current_page_name='volunteer_schedule', event_pk=pk)
+
+    if not objs:
+        return render(request, '../templates/event_detail.html', response.as_dict())
 
     data = []
     activity_pk = {}
@@ -80,6 +158,7 @@ def show_schedule(request, pk):
         row_data = {'start_dt': activity.start_dt,
                     'end_dt': activity.end_dt,
                     'time_coef': activity.activity.category.time_coefficient,
+                    'additional_time': activity.activity.category.additional_time,
                     'activity': activity.activity.name,
                     'persons': [f"{person.last_name} {person.first_name}" for person in activity.person.all()],
                     'need_peoples': activity.activity.need_peoples,
@@ -89,54 +168,43 @@ def show_schedule(request, pk):
 
         data.append(row_data)
 
+    for i in range(len(data)):
+        row_data = data[i]
+        act = Act(row_data['start_dt'], row_data['end_dt'], row_data['activity_pk'])
+        for j in range(i + 1, len(data)):
+            checking_act = Act(data[j]['start_dt'], data[j]['end_dt'], data[j]['activity_pk'])
+
+            if is_intersects(start_dt=checking_act.start_dt, end_dt=checking_act.end_dt, activity=act,
+                             checked_activity=checking_act):
+                data[j]['unavailable'] = data[i]['persons']
+            else:
+                data[j]['unavailable'] = list()
+
     df = pd.DataFrame(data)
 
     df['num_peoples'] = df['persons'].apply(len)
 
-    def need_peoples_transform(value):
-        need = value['need_peoples']
-        current = value['num_peoples']
-        msg = f'{current}/{need}'
-
-        if need == current:
-            return f'Заполнено ({msg})'
-        diff = need - current
-        admin_url = reverse('admin:schedule_app_activityonevent_change', args=(value['activity_pk'],))
-
-        return f'<a href="{admin_url}" target="_blank">Требуется еще {diff} ({msg})</a>'
-
-    def date_transform(value):
-        start = value['start_dt']
-        end = value['end_dt']
-        coef = value['time_coef']
-        duration = (end - start).seconds // 60
-        duration_with_coef = int(duration * coef)
-
-        duration = human_readable_time(duration)
-        duration_with_coef = human_readable_time(duration_with_coef)
-        return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
-
-    def human_readable_time(value):
-        if value > 60:
-            h = value // 60
-            m = value % 60
-            value = f"{h} ч. {m} мин."
-        else:
-            value = f"{value} мин."
-        return value
-
-    def highlight(s):
-        return "background: #00FF00" if s == 'Участвует' else None
-
     df['need_peoples'] = df[['need_peoples', 'num_peoples', 'activity_pk']].apply(need_peoples_transform, axis=1)
-    df['start_dt'] = df[['start_dt', 'end_dt', 'time_coef']].apply(date_transform, axis=1)
-
     df.drop(columns=['num_peoples'], inplace=True)
     df = df.explode('persons').reset_index(drop=True)
-    df['values'] = 1
-    df = df.pivot_table(values='values', index='persons', columns=['start_dt', 'activity','need_peoples'],
+
+    unavailables = df.explode('unavailable') \
+        .dropna(subset=['unavailable']) \
+        .drop(columns=['persons']) \
+        .rename(columns={'unavailable': 'persons'}) \
+        .drop_duplicates() \
+        .reset_index(drop=True)
+
+    unavailables['available'] = -1
+
+    df = df.drop(columns=['unavailable'])
+
+    df = pd.concat([df, unavailables]).fillna(1).astype({'available': 'int8'})
+    df['start_dt'] = df[['start_dt', 'end_dt', 'time_coef', 'additional_time']].apply(date_transform, axis=1)
+
+    df = df.pivot_table(values='available', index='persons', columns=['start_dt', 'activity', 'need_peoples'],
                         fill_value=0).astype('int8')
-    df = df.applymap(lambda elem: 'Участвует' if elem == 1 else 'Доступен')
+    df = df.applymap(replace_person_status)
 
     table_styles = [{'selector': 'th.col_heading', 'props': 'text-align: center;'},
                     {'selector': 'th.col_heading.level1', 'props': 'font-size: 1.5em;'}]
@@ -145,12 +213,11 @@ def show_schedule(request, pk):
         if 'Требуется еще' in col[2]:
             table_styles.append({'selector': f'th.col_heading.level2.col{i}', 'props': 'background: #FFD700;'})
 
-    df.columns.set_names(['Время', 'Активность','Наполнение'], inplace=True)
+    df.columns.set_names(['Время', 'Активность', 'Наполнение'], inplace=True)
     df.index.set_names([''], inplace=True)
     df = df.style.applymap(highlight)
 
     out = df.set_table_attributes('class="table"').set_table_styles(table_styles, overwrite=False).to_html()
 
-    return render(request, '../templates/event_detail.html',
-                  {'table_content': out,
-                   'event': Event.objects.get(pk=pk)})
+    response.content = out
+    return render(request, '../templates/event_detail.html', response.as_dict())

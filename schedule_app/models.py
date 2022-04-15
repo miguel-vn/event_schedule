@@ -104,8 +104,8 @@ class ActivityOnEvent(models.Model):
     end_dt = models.DateTimeField(verbose_name='Дата окончания')
 
     class Meta:
-        verbose_name = 'Общее расписание'
-        verbose_name_plural = 'Общее расписание'
+        verbose_name = 'Расписание активностей'
+        verbose_name_plural = 'Расписание активностей'
 
     @admin.display(description='Продолжительность')
     def duration(self):
