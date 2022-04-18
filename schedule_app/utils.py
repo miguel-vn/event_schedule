@@ -1,6 +1,7 @@
 import datetime
 from collections import namedtuple
 
+import pandas as pd
 from django.shortcuts import reverse
 
 
@@ -12,13 +13,19 @@ def need_peoples_transform(value):
     need = value['need_peoples']
     current = value['num_peoples']
     msg = f'{current}/{need}'
-
-    if need == current:
-        return f'Заполнено ({msg})'
-    diff = need - current
     admin_url = reverse('admin:schedule_app_activityonevent_change', args=(value['activity_pk'],))
 
+    if need == current:
+        return f'<a href="{admin_url}" target="_blank">Заполнено ({msg})</a>'
+
+    diff = need - current
+
     return f'<a href="{admin_url}" target="_blank">Требуется еще {diff} ({msg})</a>'
+
+
+def create_url_for_person(event, person):
+    person_url = reverse('person', args=(event.pk, person.pk))
+    return f'<a href="{person_url}" target="_blank">{person.last_name} {person.first_name}</a>'
 
 
 def date_transform(value):
@@ -96,3 +103,18 @@ class Act:
         self.pk = pk
         self.start_dt = start_dt
         self.end_dt = end_dt
+
+
+def create_google_calendar_format_schedule(activities):
+    date_format = '%Y-%m-%d'
+    time_format = '%H:%M:%S'
+    data = []
+    for activity in activities:
+        data.append({'Subject': activity.activity.name,
+                     'Start Date': activity.start_dt.strftime(date_format),
+                     'Start Time': activity.start_dt.strftime(time_format),
+                     'End Date': activity.end_dt.strftime(date_format),
+                     'End Time': activity.end_dt.strftime(time_format),
+                     'Description': activity.activity.description})
+
+    return pd.DataFrame(data, dtype=str)

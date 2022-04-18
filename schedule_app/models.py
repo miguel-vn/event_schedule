@@ -81,6 +81,9 @@ class Person(models.Model):
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
 
+    def get_full_name(self):
+        return f'{self.first_name} {self.last_name}'
+
 
 class Event(models.Model):
     title = models.CharField(max_length=120, verbose_name='Название')
