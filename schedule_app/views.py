@@ -220,9 +220,23 @@ def show_volunteer_schedule(request, pk):
     df = df.drop(columns=['unavailable'])
 
     df = pd.concat([df, unavailables]).fillna(1).astype({'available': 'int8'})
-    df['start_dt'] = df[['start_dt', 'end_dt', 'time_coef', 'additional_time']].apply(utils.date_transform, axis=1)
 
-    df = df.pivot_table(values='available', index='persons', columns=['start_dt', 'activity', 'need_peoples'],
+    df['duration'] = df[['start_dt', 'end_dt']].apply(utils.get_duration, axis=1)
+    df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']]\
+        .apply(utils.get_duration_with_coef, axis=1)
+
+    new_df = df.groupby('persons') \
+        .agg({'duration_with_coef': 'sum'}) \
+        .rename(columns={'duration_with_coef': 'duration_with_coef_full'})
+
+    new_df['duration_full'] = new_df['duration_with_coef_full'].apply(utils.total_person_load)
+
+    df['start_dt'] = df[['start_dt', 'end_dt', 'duration', 'duration_with_coef']].apply(utils.date_transform, axis=1)
+
+    df = df.merge(new_df, left_on='persons', right_index=True, how='inner')
+
+    df = df.pivot_table(values='available', index=['persons', 'duration_full'],
+                        columns=['start_dt', 'activity', 'need_peoples'],
                         fill_value=0).astype('int8')
     df = df.applymap(utils.replace_person_status)
 
@@ -234,7 +248,7 @@ def show_volunteer_schedule(request, pk):
             table_styles.append({'selector': f'th.col_heading.level2.col{i}', 'props': 'background: #FFD700;'})
 
     df.columns.set_names(['Время', 'Активность', 'Наполнение'], inplace=True)
-    df.index.set_names([''], inplace=True)
+    df.index.set_names(['', '   '], inplace=True)
     df = df.style.applymap(utils.highlight)
 
     out = df.set_table_attributes('class="table"').set_table_styles(table_styles, overwrite=False).to_html()

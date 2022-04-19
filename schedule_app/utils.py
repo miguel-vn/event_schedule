@@ -28,6 +28,26 @@ def create_url_for_person(event, person):
     return f'<a href="{person_url}" target="_blank">{person.last_name} {person.first_name}</a>'
 
 
+def get_duration(value):
+    start = value['start_dt']
+    end = value['end_dt']
+    return int((end - start).total_seconds())
+
+
+def get_duration_with_coef(value):
+    duration = value['duration']
+    coef = float(value['time_coef'])
+    at = value['additional_time']
+    dt = datetime.timedelta(hours=at.hour, minutes=at.minute, seconds=at.second).total_seconds()
+
+    return int(coef * duration) + int(dt)
+
+
+def total_person_load(value):
+    duration_with_coef = human_readable_time(value // 60)
+    return str(duration_with_coef)
+
+
 def date_transform(value):
     """
     Формирование строки с временем начала и конца активности,
@@ -35,16 +55,9 @@ def date_transform(value):
     """
     start = value['start_dt']
     end = value['end_dt']
-    coef = value['time_coef']
-    at = value['additional_time']
+    duration = human_readable_time(value['duration'] // 60)
+    duration_with_coef = human_readable_time(value['duration_with_coef'] // 60)
 
-    dt = datetime.timedelta(hours=at.hour, minutes=at.minute, seconds=at.second)
-
-    duration = int((end - start).total_seconds()) // 60
-    duration_with_coef = int(duration * coef) + int(dt.total_seconds()) // 60
-
-    duration = human_readable_time(duration)
-    duration_with_coef = human_readable_time(duration_with_coef)
     return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
 
 
