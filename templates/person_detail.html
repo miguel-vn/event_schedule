@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ object.get_full_name }}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <br>
+    <div class="row">
+        <div class="col-4">
+            <a href="{% url 'volunteer_schedule' pk=event_pk %}">Вернуться к общему расписанию</a>
+
+        </div>
+        <div class="col">
+            <a href="{% url 'download_person_schedule' event_pk=event_pk person_pk=person.pk %}">Скачать расписание</a>
+        </div>
+    </div>
+    <br>
+
+    <div class="row">
+        <div class="col-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ person.get_full_name }}</h5>
+                    <br>
+                    <h6 class="card-subtitle">Прибывает: {{ person.arrival_datetime }}</h6>
+                    <h6 class="card-subtitle">Уезжает: {{ person.departure_datetime }}</h6>
+                    <br>
+                    <h6 class="card-subtitle">email: {{ person.email }}</h6>
+                    <br>
+                    <a href="{% url 'admin:schedule_app_person_change' person.pk %}">Редактировать информацию</a>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            {% if table_content %}
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">Название</th>
+                    <th scope="col">Начало</th>
+                    <th scope="col">Конец</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in table_content %}
+                <tr>
+                    <th scope="row">{{ row.activity }}</th>
+                    <td>{{ row.start_dt }}</td>
+                    <td>{{ row.end_dt }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="container"><h2>Расписание отсутствует</h2></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

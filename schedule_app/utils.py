@@ -1,6 +1,7 @@
 import datetime
 from collections import namedtuple
 
+import pandas as pd
 from django.shortcuts import reverse
 
 
@@ -12,13 +13,39 @@ def need_peoples_transform(value):
     need = value['need_peoples']
     current = value['num_peoples']
     msg = f'{current}/{need}'
-
-    if need == current:
-        return f'Заполнено ({msg})'
-    diff = need - current
     admin_url = reverse('admin:schedule_app_activityonevent_change', args=(value['activity_pk'],))
 
+    if need == current:
+        return f'<a href="{admin_url}" target="_blank">Заполнено ({msg})</a>'
+
+    diff = need - current
+
     return f'<a href="{admin_url}" target="_blank">Требуется еще {diff} ({msg})</a>'
+
+
+def create_url_for_person(event, person):
+    person_url = reverse('person', args=(event.pk, person.pk))
+    return f'<a href="{person_url}" target="_blank">{person.last_name} {person.first_name}</a>'
+
+
+def get_duration(value):
+    start = value['start_dt']
+    end = value['end_dt']
+    return int((end - start).total_seconds())
+
+
+def get_duration_with_coef(value):
+    duration = value['duration']
+    coef = float(value['time_coef'])
+    at = value['additional_time']
+    dt = datetime.timedelta(hours=at.hour, minutes=at.minute, seconds=at.second).total_seconds()
+
+    return int(coef * duration) + int(dt)
+
+
+def total_person_load(value):
+    duration_with_coef = human_readable_time(value // 60)
+    return str(duration_with_coef)
 
 
 def date_transform(value):
@@ -28,16 +55,9 @@ def date_transform(value):
     """
     start = value['start_dt']
     end = value['end_dt']
-    coef = value['time_coef']
-    at = value['additional_time']
+    duration = human_readable_time(value['duration'] // 60)
+    duration_with_coef = human_readable_time(value['duration_with_coef'] // 60)
 
-    dt = datetime.timedelta(hours=at.hour, minutes=at.minute, seconds=at.second)
-
-    duration = int((end - start).total_seconds()) // 60
-    duration_with_coef = int(duration * coef) + int(dt.total_seconds()) // 60
-
-    duration = human_readable_time(duration)
-    duration_with_coef = human_readable_time(duration_with_coef)
     return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
 
 
@@ -96,3 +116,18 @@ class Act:
         self.pk = pk
         self.start_dt = start_dt
         self.end_dt = end_dt
+
+
+def create_google_calendar_format_schedule(activities):
+    date_format = '%Y-%m-%d'
+    time_format = '%H:%M:%S'
+    data = []
+    for activity in activities:
+        data.append({'Subject': activity.activity.name,
+                     'Start Date': activity.start_dt.strftime(date_format),
+                     'Start Time': activity.start_dt.strftime(time_format),
+                     'End Date': activity.end_dt.strftime(date_format),
+                     'End Time': activity.end_dt.strftime(time_format),
+                     'Description': activity.activity.description})
+
+    return pd.DataFrame(data, dtype=str)

@@ -43,6 +43,21 @@ def check_excluded_categories(cleaned_data, person):
         raise ValidationError({'person': f'{person.first_name} не изволит работать с этой категорией активностей.'})
 
 
+def check_person_incoming_dates(cleaned_data, person):
+    activity_start_dt = cleaned_data.get('activity').start_dt
+    activity_end_dt = cleaned_data.get('activity').end_dt
+
+    checks = [person.arrival_datetime <= activity_start_dt <= person.departure_datetime,
+              person.arrival_datetime <= activity_end_dt <= person.departure_datetime]
+    if not all(checks):
+        event_title = cleaned_data.get('event').title
+        full_name = f'{person.first_name} {person.last_name}'
+        raise ValidationError({
+            'start_dt': f'{full_name} не будет на {event_title} в это время',
+            'end_dt': f'{full_name} не будет на {event_title} в это время'
+        })
+
+
 def check_intersections(cleaned_data, person, existing_instance):
     start_dt = cleaned_data.get('start_dt')
     end_dt = cleaned_data.get('end_dt')
