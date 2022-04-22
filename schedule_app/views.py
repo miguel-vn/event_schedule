@@ -4,6 +4,7 @@ from zipfile import ZipFile
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
@@ -182,10 +183,13 @@ def show_volunteer_schedule(request, pk):
                     'persons': [utils.create_url_for_person(activity.event,
                                                             person) for person in activity.person.all()],
                     'need_peoples': activity.activity.need_peoples,
-                    'activity_pk': activity.pk}
+                    'activity_pk': activity.pk,
+                    'unavailable': [utils.create_url_for_person(activity.event,
+                                                                person) for person in
+                                    Person.objects.filter(Q(arrival_datetime__gte=activity.start_dt) |
+                                                          Q(departure_datetime__lte=activity.end_dt))]}
 
         activity_pk[activity.activity.name] = activity.pk
-
         data.append(row_data)
 
     for i in range(len(data)):
@@ -196,9 +200,7 @@ def show_volunteer_schedule(request, pk):
 
             if utils.is_intersects(start_dt=checking_act.start_dt, end_dt=checking_act.end_dt, activity=act,
                                    checked_activity=checking_act):
-                data[j]['unavailable'] = data[i]['persons']
-            else:
-                data[j]['unavailable'] = list()
+                data[j]['unavailable'] += data[i]['persons']
 
     df = pd.DataFrame(data)
 
@@ -222,7 +224,7 @@ def show_volunteer_schedule(request, pk):
     df = pd.concat([df, unavailables]).fillna(1).astype({'available': 'int8'})
 
     df['duration'] = df[['start_dt', 'end_dt']].apply(utils.get_duration, axis=1)
-    df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']]\
+    df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']] \
         .apply(utils.get_duration_with_coef, axis=1)
 
     new_df = df.groupby('persons') \
@@ -240,8 +242,7 @@ def show_volunteer_schedule(request, pk):
                         fill_value=0).astype('int8')
     df = df.applymap(utils.replace_person_status)
 
-    table_styles = [{'selector': 'th.col_heading', 'props': 'text-align: center;'},
-                    {'selector': 'th.col_heading.level1', 'props': 'font-size: 1.5em;'}]
+    table_styles = [{'selector': 'th.col_heading', 'props': 'text-align: center;'}]
 
     for i, col in enumerate(df.columns):
         if 'Требуется еще' in col[2]:
