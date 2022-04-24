@@ -23,7 +23,7 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
     #  с учетом коэффициента категории и доп. времени в ней
     form = forms.ActivityOnEventForm
     list_display = ('activity', 'event', 'start_dt', 'end_dt', 'duration')
-    list_filter = ('event', 'activity', 'person')
+    list_filter = ('event', 'activity__activity_type', 'activity', 'person')
     save_as = True
 
     @staticmethod
