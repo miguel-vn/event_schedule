@@ -32,7 +32,7 @@ class EventForm(ModelForm):
 class PersonForm(ModelForm):
     class Meta:
         model = models.Person
-        fields = ('first_name', 'last_name', 'free_time_limit', 'night_man',
+        fields = ('first_name', 'last_name', 'email', 'free_time_limit', 'night_man',
                   'arrival_datetime', 'departure_datetime', 'excluded_categories')
 
 
@@ -92,6 +92,10 @@ class ActivityOnEventForm(ModelForm):
     class Meta:
         model = models.ActivityOnEvent
         fields = ('event', 'activity', 'person', 'start_dt', 'end_dt')
+
+    def __init__(self, *args, **kwargs):
+        super(ActivityOnEventForm, self).__init__(*args, **kwargs)
+        self.fields['event'].initial = models.Event.objects.latest('start_date')
 
     def clean(self):
         super(ActivityOnEventForm, self).clean()
