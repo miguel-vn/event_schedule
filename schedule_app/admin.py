@@ -22,7 +22,7 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
     # TODO рядом с duration отображать колонку "учетное время", куда выводить
     #  с учетом коэффициента категории и доп. времени в ней
     form = forms.ActivityOnEventForm
-    list_display = ('activity', 'event', 'start_dt', 'end_dt', 'duration')
+    list_display = ('activity', 'get_activity_type', 'event', 'start_dt', 'end_dt', 'duration')
     list_filter = ('event', 'activity__activity_type', 'activity', 'person')
     save_as = True
 
@@ -35,6 +35,10 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
     @admin.display(description='Дата окончания')
     def end_date_time(obj):
         return obj.end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    @admin.display(description='Тип')
+    def get_activity_type(self, obj):
+        return obj.activity.activity_type
 
 
 @admin.display(description='Активности')
