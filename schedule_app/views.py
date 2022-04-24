@@ -163,18 +163,15 @@ def show_other_schedule(request, pk):
 
 
 def show_volunteer_schedule(request, pk):
-    objs = ActivityOnEvent.objects.filter(event__pk=pk,
-                                          activity__activity_type__name='volunteer_schedule') \
-        .order_by('start_dt', 'end_dt')
+    objs = ActivityOnEvent.objects.filter(event__pk=pk)
 
     response = ScheduleResponse(current_page_name='volunteer_schedule', event_pk=pk)
 
-    if not objs:
+    if not objs.filter(activity__activity_type__name='volunteer_schedule'):
         return render(request, '../templates/event_detail.html', response.as_dict())
 
     data = []
-    activity_pk = {}
-    for activity in objs:
+    for activity in objs.filter(activity__activity_type__name='volunteer_schedule').order_by('start_dt', 'end_dt'):
         row_data = {'start_dt': activity.start_dt,
                     'end_dt': activity.end_dt,
                     'time_coef': activity.activity.category.time_coefficient,
@@ -183,24 +180,21 @@ def show_volunteer_schedule(request, pk):
                     'persons': [utils.create_url_for_person(activity.event,
                                                             person) for person in activity.person.all()],
                     'need_peoples': activity.activity.need_peoples,
-                    'activity_pk': activity.pk,
-                    'unavailable': [utils.create_url_for_person(activity.event,
-                                                                person) for person in
-                                    Person.objects.filter(Q(arrival_datetime__gte=activity.start_dt) |
-                                                          Q(departure_datetime__lte=activity.end_dt))]}
+                    'activity_pk': activity.pk}
 
-        activity_pk[activity.activity.name] = activity.pk
+        not_arrived_persons = Person.objects.filter(Q(arrival_datetime__gte=activity.start_dt) |
+                                                    Q(departure_datetime__lte=activity.end_dt))
+        row_data['unavailable'] = [utils.create_url_for_person(activity.event,
+                                                               person) for person in not_arrived_persons]
+
+        another_acts = objs.filter(~Q(pk=activity.pk))
+        for another_act in another_acts:
+            if utils.is_intersects(start_dt=another_act.start_dt, end_dt=another_act.end_dt, activity=activity,
+                                   checked_activity=another_act):
+                row_data['unavailable'] += [utils.create_url_for_person(activity.event,
+                                                                        person) for person in another_act.person.all()]
+
         data.append(row_data)
-
-    for i in range(len(data)):
-        row_data = data[i]
-        act = utils.Act(row_data['start_dt'], row_data['end_dt'], row_data['activity_pk'])
-        for j in range(i + 1, len(data)):
-            checking_act = utils.Act(data[j]['start_dt'], data[j]['end_dt'], data[j]['activity_pk'])
-
-            if utils.is_intersects(start_dt=checking_act.start_dt, end_dt=checking_act.end_dt, activity=act,
-                                   checked_activity=checking_act):
-                data[j]['unavailable'] += data[i]['persons']
 
     df = pd.DataFrame(data)
 
