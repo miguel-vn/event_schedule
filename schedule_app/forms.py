@@ -1,10 +1,8 @@
-import datetime
-
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
 from schedule_app import models
-from schedule_app.utils import is_intersects
+from schedule_app.utils import is_intersects, get_duration_with_coef
 
 
 class CategoryForm(ModelForm):
@@ -73,12 +71,20 @@ def check_intersections(cleaned_data, person, existing_instance):
                 'end_dt': f'Пересечение с другой активностью: {act_detail})'
             })
 
-    activities_sum = datetime.timedelta(0)
-    activities_len = [act.end_dt - act.start_dt for act in activities]
-    for act in activities_len:
-        activities_sum += act
+    time_params = {'duration': int((end_dt - start_dt).total_seconds()),
+                   'time_coef': float(cleaned_data.get('activity').category.time_coefficient),
+                   'additional_time': cleaned_data.get('activity').category.additional_time}
 
-    if activities_sum > person.free_time_limit:
+    activities_sum = get_duration_with_coef(time_params)
+
+    for act in activities.filter(activity__activity_type__name='volunteer_schedule'):
+        time_params = {'duration': int((act.end_dt - act.start_dt).total_seconds()),
+                       'time_coef': float(act.activity.category.time_coefficient),
+                       'additional_time': act.activity.category.additional_time}
+
+        activities_sum += get_duration_with_coef(time_params)
+
+    if activities_sum > person.free_time_limit.total_seconds():
         raise ValidationError({'start_dt': 'Недостаточно свободного времени'})
 
 
