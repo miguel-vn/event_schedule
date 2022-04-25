@@ -222,9 +222,10 @@ def show_volunteer_schedule(request, pk):
     df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']] \
         .apply(utils.get_duration_with_coef, axis=1)
 
-    df['duration_with_coef'] = np.where(df['available'] == -1, 0, df['duration_with_coef'])
+    new_df = df[['persons', 'duration_with_coef', 'available']]
+    new_df.loc[new_df['available'] == -1, 'duration_with_coef'] = 0
 
-    new_df = df.groupby('persons') \
+    new_df = new_df.groupby('persons') \
         .agg({'duration_with_coef': 'sum'}) \
         .rename(columns={'duration_with_coef': 'duration_with_coef_full'})
 
@@ -249,7 +250,7 @@ def show_volunteer_schedule(request, pk):
     df.index.set_names(['', '   '], inplace=True)
     df = df.style.applymap(utils.highlight)
 
-    out = df.set_table_attributes('class="table"').set_table_styles(table_styles, overwrite=False).to_html()
+    out = df.set_table_attributes('class="table table-bordered"').set_table_styles(table_styles, overwrite=False).to_html()
 
     response.content = out
     return render(request, '../templates/event_detail.html', response.as_dict())
