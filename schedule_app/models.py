@@ -62,7 +62,7 @@ class Activity(models.Model):
 class Person(models.Model):
     first_name = models.CharField(max_length=80, verbose_name='Имя')
     last_name = models.CharField(max_length=80, verbose_name='Фамилия')
-    email = models.EmailField(verbose_name='email', null=True)
+    email = models.EmailField(verbose_name='email', null=True, blank=True)
 
     night_man = models.BooleanField(verbose_name='Ночной человек', null=False, default=False)
     arrival_datetime = models.DateTimeField(verbose_name='Дата и время прибытия', null=True)
