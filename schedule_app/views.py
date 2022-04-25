@@ -1,7 +1,6 @@
 import os
 from zipfile import ZipFile
 
-import numpy as np
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
@@ -222,7 +221,7 @@ def show_volunteer_schedule(request, pk):
     df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']] \
         .apply(utils.get_duration_with_coef, axis=1)
 
-    new_df = df[['persons', 'duration_with_coef', 'available']]
+    new_df = df[['persons', 'duration_with_coef', 'available']].copy()
     new_df.loc[new_df['available'] == -1, 'duration_with_coef'] = 0
 
     new_df = new_df.groupby('persons') \
@@ -250,7 +249,9 @@ def show_volunteer_schedule(request, pk):
     df.index.set_names(['', '   '], inplace=True)
     df = df.style.applymap(utils.highlight)
 
-    out = df.set_table_attributes('class="table table-bordered"').set_table_styles(table_styles, overwrite=False).to_html()
+    out = df.set_table_attributes('class="table table-bordered"') \
+        .set_table_styles(table_styles, overwrite=False) \
+        .to_html()
 
     response.content = out
     return render(request, '../templates/event_detail.html', response.as_dict())
