@@ -2,6 +2,7 @@ import os
 from zipfile import ZipFile
 
 import pandas as pd
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q
@@ -36,6 +37,7 @@ class BaseOperations(LoginRequiredMixin):
     login_url = reverse_lazy('login')
 
 
+@login_required
 def download_all(_, pk):
     files_to_zip = {}
 
@@ -61,6 +63,7 @@ def download_all(_, pk):
     raise Http404
 
 
+@login_required
 def download_person(_, event_pk, person_pk):
     person = Person.objects.get(pk=person_pk)
 
@@ -106,6 +109,7 @@ class ScheduleResponse:
                 'event': self.event}
 
 
+@login_required
 def show_person_schedule(request, event_pk, person_pk):
     person = Person.objects.get(pk=person_pk)
     objs = ActivityOnEvent.objects.filter(event__pk=event_pk,
@@ -118,6 +122,7 @@ def show_person_schedule(request, event_pk, person_pk):
                                                                'table_content': objs if objs else None})
 
 
+@login_required
 def show_official_schedule(request, pk):
     objs = ActivityOnEvent.objects.filter(event__pk=pk,
                                           activity__activity_type__name='official_schedule') \
@@ -140,6 +145,7 @@ def show_official_schedule(request, pk):
     return render(request, '../templates/other_schedule.html', response.as_dict())
 
 
+@login_required
 def show_other_schedule(request, pk):
     objs = ActivityOnEvent.objects.filter(event__pk=pk,
                                           activity__activity_type__name='other_schedule') \
@@ -162,6 +168,7 @@ def show_other_schedule(request, pk):
     return render(request, '../templates/other_schedule.html', response.as_dict())
 
 
+@login_required
 def show_volunteer_schedule(request, pk):
     objs = ActivityOnEvent.objects.filter(event__pk=pk)
 
