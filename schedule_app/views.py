@@ -1,6 +1,7 @@
 import os
 from zipfile import ZipFile
 
+import numpy as np
 import pandas as pd
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
@@ -214,12 +215,14 @@ def show_volunteer_schedule(request, pk):
     unavailables['available'] = -1
 
     df = df.drop(columns=['unavailable'])
-
-    df = pd.concat([df, unavailables]).fillna(1).astype({'available': 'int8'})
+    df = pd.concat([df, unavailables]).reset_index(drop=True)
+    df['available'] = df['available'].fillna(1).astype({'available': 'int8'})
 
     df['duration'] = df[['start_dt', 'end_dt']].apply(utils.get_duration, axis=1)
     df['duration_with_coef'] = df[['duration', 'time_coef', 'additional_time']] \
         .apply(utils.get_duration_with_coef, axis=1)
+
+    df['duration_with_coef'] = np.where(df['available'] == -1, 0, df['duration_with_coef'])
 
     new_df = df.groupby('persons') \
         .agg({'duration_with_coef': 'sum'}) \
