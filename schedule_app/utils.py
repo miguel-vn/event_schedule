@@ -103,7 +103,7 @@ def is_intersects(start_dt, end_dt, activity, checked_activity):
 
     latest_start = max(r1.start, r2.start)
     earliest_end = min(r1.end, r2.end)
-    delta = ((earliest_end - latest_start).seconds // 60) % 60 + 1
+    delta = ((earliest_end - latest_start).total_seconds() // 60) % 60
 
     overlap = max(0, delta)
     if overlap > 0 and checked_activity != activity and checked_activity.pk != activity.pk:
