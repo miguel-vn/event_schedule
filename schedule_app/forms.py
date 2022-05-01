@@ -3,6 +3,7 @@ import datetime as dt
 from django.core.exceptions import ValidationError
 from django.forms import ModelForm
 
+import schedule_app.constants as const
 from schedule_app import models
 from schedule_app.utils import is_intersects, get_duration_with_coef
 
@@ -81,7 +82,7 @@ def check_intersections(cleaned_data, person, existing_instance):
 def check_free_time_limit(cleaned_data, person):
     start_dt = cleaned_data.get('start_dt')
     end_dt = cleaned_data.get('end_dt')
-    activities = person.get_schedule(cleaned_data.get('event').pk, 'volunteer_schedule')
+    activities = person.get_schedule(cleaned_data.get('event').pk, const.VOLUNTEER)
 
     time_params = {'duration': end_dt - start_dt,
                    'time_coef': float(cleaned_data.get('activity').category.time_coefficient),
@@ -89,7 +90,7 @@ def check_free_time_limit(cleaned_data, person):
 
     activities_sum = get_duration_with_coef(**time_params)
 
-    for act in activities.filter(activity__activity_type__name='volunteer_schedule'):
+    for act in activities:
         time_params = {'duration': act.duration(),
                        'time_coef': float(act.activity.category.time_coefficient),
                        'additional_time': act.activity.category.additional_time}
@@ -119,7 +120,7 @@ class ActivityOnEventForm(ModelForm):
         persons = self.cleaned_data.get('person')
         for p in persons:
             check_excluded_categories(self.cleaned_data, p)
-            if self.cleaned_data.get('activity').activity_type.name == 'volunteer_schedule':
+            if self.cleaned_data.get('activity').activity_type.name == const.VOLUNTEER:
                 check_free_time_limit(self.cleaned_data, p)
             check_intersections(self.cleaned_data, p, self.instance)
 

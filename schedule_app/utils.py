@@ -14,8 +14,6 @@ class ScheduleResponse:
     empty_schedule_message = '<div class="container"><h2>Расписание отсутствует</h2></div>'
 
     def __init__(self, current_page_name, event_pk, content=None):
-        assert current_page_name in ('official_schedule', 'other_schedule', 'volunteer_schedule')
-
         self.current_page_name = current_page_name
         self.event = Event.objects.get(pk=event_pk)
         self.__content = content

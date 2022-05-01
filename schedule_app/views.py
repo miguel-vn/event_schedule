@@ -12,6 +12,7 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView
 
 import schedule_app.common as common
+import schedule_app.constants as const
 import schedule_app.utils as utils
 from adentro_schedule import settings
 from schedule_app.models import Event, Person
@@ -85,7 +86,7 @@ def download_person(_, event_pk, person_pk):
 @login_required
 def show_person_schedule(request, event_pk, person_pk):
     person = Person.objects.get(pk=person_pk)
-    objs = person.get_schedule(event_pk, 'volunteer_schedule').order_by('start_dt', 'end_dt')
+    objs = person.get_schedule(event_pk, const.VOLUNTEER).order_by('start_dt', 'end_dt')
 
     return render(request, '../templates/person_detail.html', {'event_pk': event_pk,
                                                                'person': person,
@@ -95,7 +96,7 @@ def show_person_schedule(request, event_pk, person_pk):
 @login_required
 def show_official_schedule(request, pk):
     objs = common.get_official_schedule(pk).order_by('start_dt', 'end_dt')
-    response = utils.ScheduleResponse(current_page_name='official_schedule', event_pk=pk)
+    response = utils.ScheduleResponse(current_page_name=const.OFFICIAL, event_pk=pk)
     if not objs:
         return render(request, '../templates/event_detail.html', response.as_dict())
 
@@ -115,7 +116,7 @@ def show_official_schedule(request, pk):
 @login_required
 def show_other_schedule(request, pk):
     objs = common.get_other_schedule(pk).order_by('start_dt', 'end_dt')
-    response = utils.ScheduleResponse(current_page_name='other_schedule', event_pk=pk)
+    response = utils.ScheduleResponse(current_page_name=const.OTHER, event_pk=pk)
 
     if not objs:
         return render(request, '../templates/event_detail.html', response.as_dict())
@@ -137,9 +138,9 @@ def show_other_schedule(request, pk):
 def show_volunteer_schedule(request, pk):
     objs = common.get_full_schedule(pk)
 
-    response = utils.ScheduleResponse(current_page_name='volunteer_schedule', event_pk=pk)
+    response = utils.ScheduleResponse(current_page_name=const.VOLUNTEER, event_pk=pk)
 
-    if not objs.filter(activity__activity_type__name='volunteer_schedule'):
+    if not objs.filter(activity__activity_type__name=const.VOLUNTEER):
         return render(request, '../templates/event_detail.html', response.as_dict())
 
     headers = {'activity_dt': list(),
@@ -150,7 +151,7 @@ def show_volunteer_schedule(request, pk):
     names = {person: {'status': list(),
                       'duration_full': datetime.timedelta(seconds=0)} for person in persons}
 
-    for activity in objs.filter(activity__activity_type__name='volunteer_schedule').order_by('start_dt', 'end_dt'):
+    for activity in objs.filter(activity__activity_type__name=const.VOLUNTEER).order_by('start_dt', 'end_dt'):
         row_data = {'start_dt': activity.start_dt,
                     'end_dt': activity.end_dt,
                     'time_coef': activity.activity.category.time_coefficient,
@@ -198,5 +199,5 @@ def show_volunteer_schedule(request, pk):
 
     return render(request, '../templates/event_detail.html', {'table_headers': headers,
                                                               'persons': names,
-                                                              'current_page': 'volunteer_schedule',
+                                                              'current_page': const.VOLUNTEER,
                                                               'event': event})

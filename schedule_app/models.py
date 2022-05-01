@@ -8,6 +8,8 @@ import datetime
 from django.contrib import admin
 from django.db import models
 
+from schedule_app.constants import ACTIVITY_TYPE_CHOICES
+
 
 class Category(models.Model):
     name = models.CharField(max_length=120, verbose_name='Название')
@@ -31,9 +33,7 @@ class ActivityType(models.Model):
     """
     Тип активности: официальное расписание, волонтерское расписание, прочее (конкурсы, апертуры, репетиции, возлияния...)
     """
-    name = models.CharField(choices=[('official_schedule', 'Официальное расписание'),
-                                     ('volunteer_schedule', 'Волонтерское расписание'),
-                                     ('other', 'Прочее')], max_length=120, default='official_schedule')
+    name = models.CharField(choices=ACTIVITY_TYPE_CHOICES, max_length=120, default='official_schedule')
 
     class Meta:
         verbose_name = 'Тип деятельности'
@@ -90,7 +90,8 @@ class Person(models.Model):
     def get_schedule(self, event_pk, activity_type=None):
         if not activity_type:
             return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self)
-        return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self, activity__activity_type__name=activity_type)
+        return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self,
+                                              activity__activity_type__name=activity_type)
 
     def arrive_and_depart_filled(self):
         return all([self.arrival_datetime is not None, self.departure_datetime is not None])
