@@ -54,7 +54,7 @@ def need_peoples_transform(value):
 
 def create_url_for_person(event, person):
     person_url = reverse('person', args=(event.pk, person.pk))
-    return f'<a href="{person_url}" target="_blank">{person.last_name} {person.first_name}</a>'
+    return f'<a href="{person_url}">{person.last_name} {person.first_name}</a>'
 
 
 def get_duration(value: dict) -> datetime.timedelta:
@@ -80,7 +80,7 @@ def date_transform(value, duration, duration_with_coef):
     duration = human_readable_time(int(duration.total_seconds()) // 60)
     duration_with_coef = human_readable_time(int(duration_with_coef.total_seconds()) // 60)
 
-    return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
+    return f"{start.strftime(dt_format)} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
 
 
 def human_readable_time(value):
@@ -112,13 +112,6 @@ def is_intersects(start_dt, end_dt, activity, checked_activity):
     if overlap > 0 and checked_activity != activity and checked_activity.pk != activity.pk:
         return True
     return False
-
-
-class Act:
-    def __init__(self, start_dt, end_dt, pk: int):
-        self.pk = pk
-        self.start_dt = start_dt
-        self.end_dt = end_dt
 
 
 def create_google_calendar_format_schedule(activities):

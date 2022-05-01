@@ -46,8 +46,7 @@ def download_all(_, pk):
     for person in common.get_full_schedule(pk).exclude(person__isnull=True).values('person').distinct():
         person = Person.objects.get(pk=person['person'])
 
-        activities = event.get_schedule().filter(person__pk=person.pk) \
-            .order_by('start_dt', 'end_dt')
+        activities = person.get_schedule(pk).order_by('start_dt', 'end_dt')
 
         filename = f'{person.last_name} {person.first_name}.csv'
         files_to_zip[filename] = utils.create_google_calendar_format_schedule(activities)
