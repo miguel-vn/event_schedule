@@ -92,6 +92,9 @@ class Person(models.Model):
             return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self)
         return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self, activity__activity_type__name=activity_type)
 
+    def arrive_and_depart_filled(self):
+        return all([self.arrival_datetime is not None, self.departure_datetime is not None])
+
 
 class Event(models.Model):
     title = models.CharField(max_length=120, verbose_name='Название')

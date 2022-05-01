@@ -183,6 +183,8 @@ def show_volunteer_schedule(request, pk):
                 names[person]['status'].append('Участвует')
             elif person in row_data['unavailable']:
                 names[person]['status'].append('Недоступен')
+            elif not person.arrive_and_depart_filled():
+                names[person]['status'].append('?')
             else:
                 names[person]['status'].append('Доступен')
 
