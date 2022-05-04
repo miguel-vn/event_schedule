@@ -44,9 +44,9 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
 @admin.display(description='Активности')
 class ActivityAdmin(admin.ModelAdmin):
     form = forms.ActivityForm
-    list_display = ('name', 'category')
+    list_display = ('name', 'category', 'activity_type')
 
-    list_filter = ('category',)
+    list_filter = ('category', 'activity_type')
 
 
 # class ActivitiesInline(admin.TabularInline):
@@ -75,13 +75,3 @@ admin.site.register(models.Activity, ActivityAdmin)
 admin.site.register(models.Person, PersonAdmin)
 admin.site.register(models.Event, EventAdmin)
 admin.site.register(models.ActivityOnEvent, ActivityOnEventAdmin)
-
-"""
-    @admin.display(description='Доступное свободное время')
-    def available_free_time(self):
-        activities_sum = datetime.timedelta(0)
-        activities_len = [act['end_dt'] - act['start_dt'] for act in self.activities.values()]
-        for act in activities_len:
-            activities_sum += act
-        return self.free_time_limit - activities_sum
-"""

@@ -18,6 +18,8 @@ from adentro_schedule import settings
 from schedule_app.models import Event, Person
 
 
+# https://django-plotly-dash.readthedocs.io/en/latest/index.html may be useful for tables
+
 class EventsList(ListView):
     model = Event
     paginate_by = 10
