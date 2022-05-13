@@ -8,11 +8,32 @@ import datetime
 from django.contrib import admin
 from django.db import models
 
-from schedule_app.constants import ACTIVITY_TYPE_CHOICES
+import schedule_app.constants as const
+
+
+class ActivityType(models.Model):
+    """
+    Тип активности: официальное расписание, волонтерское расписание, прочее (конкурсы, апертуры, репетиции, возлияния...)
+    """
+
+    name = models.CharField(choices=const.ACTIVITY_TYPE_CHOICES, max_length=120, default=const.VOLUNTEER)
+
+    class Meta:
+        verbose_name = 'Тип деятельности'
+        verbose_name_plural = 'Типы деятельности'
+
+    def get_events(self, pk):
+        return ActivityOnEvent.objects.filter(event__pk=pk, activity__activity_type=self)
+
+    def __str__(self):
+        return self.get_name_display()
 
 
 class Category(models.Model):
     name = models.CharField(max_length=120, verbose_name='Название')
+    activity_type = models.ForeignKey(ActivityType, on_delete=models.CASCADE, verbose_name='Тип активности',
+                                      default=0)
+
     work_with_peoples = models.BooleanField(default=False, verbose_name='Работа с людьми')
     time_coefficient = models.DecimalField(default=1.0, decimal_places=1, max_digits=2,
                                            blank=False,
@@ -29,29 +50,11 @@ class Category(models.Model):
         return self.name
 
 
-class ActivityType(models.Model):
-    """
-    Тип активности: официальное расписание, волонтерское расписание, прочее (конкурсы, апертуры, репетиции, возлияния...)
-    """
-    name = models.CharField(choices=ACTIVITY_TYPE_CHOICES, max_length=120, default='official_schedule')
-
-    class Meta:
-        verbose_name = 'Тип деятельности'
-        verbose_name_plural = 'Типы деятельности'
-
-    def get_events(self, pk):
-        return ActivityOnEvent.objects.filter(event__pk=pk, activity__activity_type=self)
-
-    def __str__(self):
-        return self.get_name_display()
-
-
 class Activity(models.Model):
     name = models.CharField(max_length=120, verbose_name='Название')
     description = models.TextField(max_length=5000, blank=True, null=True, verbose_name='Описание')
 
     category = models.ForeignKey(Category, on_delete=models.CASCADE, verbose_name='Категория')
-    activity_type = models.ForeignKey(ActivityType, on_delete=models.CASCADE, verbose_name='Тип активности')
     need_peoples = models.IntegerField(null=True, blank=True, verbose_name='Необходимо людей')
 
     class Meta:
@@ -91,7 +94,7 @@ class Person(models.Model):
         if not activity_type:
             return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self)
         return ActivityOnEvent.objects.filter(event__pk=event_pk, person=self,
-                                              activity__activity_type__name=activity_type)
+                                              activity__category__activity_type__name=activity_type)
 
     def arrive_and_depart_filled(self):
         return all([self.arrival_datetime is not None, self.departure_datetime is not None])
@@ -112,7 +115,7 @@ class Event(models.Model):
     def get_schedule(self, activity_type=None):
         if not activity_type:
             return ActivityOnEvent.objects.filter(event=self)
-        return ActivityOnEvent.objects.filter(event=self, activity__activity_type__name=activity_type)
+        return ActivityOnEvent.objects.filter(event=self, activity__category__activity_type__name=activity_type)
 
 
 class ActivityOnEvent(models.Model):

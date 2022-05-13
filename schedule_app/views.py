@@ -142,7 +142,7 @@ def show_volunteer_schedule(request, pk):
 
     response = utils.ScheduleResponse(current_page_name=const.VOLUNTEER, event_pk=pk)
 
-    if not objs.filter(activity__activity_type__name=const.VOLUNTEER):
+    if not objs.filter(activity__category__activity_type__name=const.VOLUNTEER):
         return render(request, '../templates/event_detail.html', response.as_dict())
 
     headers = {'activity_dt': list(),
@@ -153,7 +153,7 @@ def show_volunteer_schedule(request, pk):
     names = {person: {'status': list(),
                       'duration_full': datetime.timedelta(seconds=0)} for person in persons}
 
-    for activity in objs.filter(activity__activity_type__name=const.VOLUNTEER).order_by('start_dt', 'end_dt'):
+    for activity in objs.filter(activity__category__activity_type__name=const.VOLUNTEER).order_by('start_dt', 'end_dt'):
         row_data = {'start_dt': activity.start_dt,
                     'end_dt': activity.end_dt,
                     'time_coef': activity.activity.category.time_coefficient,

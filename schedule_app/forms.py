@@ -11,7 +11,7 @@ from schedule_app.utils import is_intersects, get_duration_with_coef
 class CategoryForm(ModelForm):
     class Meta:
         model = models.Category
-        fields = ('name', 'work_with_peoples', 'time_coefficient', 'additional_time')
+        fields = ('name', 'activity_type', 'work_with_peoples', 'time_coefficient', 'additional_time')
 
 
 class ActivityTypeForm(ModelForm):
@@ -23,7 +23,7 @@ class ActivityTypeForm(ModelForm):
 class ActivityForm(ModelForm):
     class Meta:
         model = models.Activity
-        fields = ('category', 'activity_type', 'name', 'description', 'need_peoples')
+        fields = ('category', 'name', 'description', 'need_peoples')
 
 
 class EventForm(ModelForm):
