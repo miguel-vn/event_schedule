@@ -1,8 +1,35 @@
 import datetime
 from collections import namedtuple
+from decimal import Decimal
 
 import pandas as pd
 from django.shortcuts import reverse
+
+from schedule_app.models import Event
+
+dt_format = '%d.%m %H:%M'
+
+
+class ScheduleResponse:
+    empty_schedule_message = '<div class="container"><h2>Расписание отсутствует</h2></div>'
+
+    def __init__(self, current_page_name, event_pk, content=None):
+        self.current_page_name = current_page_name
+        self.event = Event.objects.get(pk=event_pk)
+        self.__content = content
+
+    @property
+    def content(self):
+        return self.__content if self.__content else self.empty_schedule_message
+
+    @content.setter
+    def content(self, value):
+        self.__content = value
+
+    def as_dict(self):
+        return {'table_content': self.content,
+                'current_page': self.current_page_name,
+                'event': self.event}
 
 
 def need_peoples_transform(value):
@@ -11,7 +38,7 @@ def need_peoples_transform(value):
     Формирует ссылку на админку, если нет
     """
     need = value['need_peoples']
-    current = value['num_peoples']
+    current = len(value['persons'])
     msg = f'{current}/{need}'
     admin_url = reverse('admin:schedule_app_activityonevent_change', args=(value['activity_pk'],))
 
@@ -25,40 +52,33 @@ def need_peoples_transform(value):
 
 def create_url_for_person(event, person):
     person_url = reverse('person', args=(event.pk, person.pk))
-    return f'<a href="{person_url}" target="_blank">{person.last_name} {person.first_name}</a>'
+    return f'<a href="{person_url}">{person.last_name} {person.first_name}</a>'
 
 
-def get_duration(value):
-    start = value['start_dt']
-    end = value['end_dt']
-    return int((end - start).total_seconds())
+def get_duration(value: dict) -> datetime.timedelta:
+    return datetime.timedelta(seconds=int((value['end_dt'] - value['start_dt']).total_seconds()))
 
 
-def get_duration_with_coef(value):
-    duration = value['duration']
-    coef = float(value['time_coef'])
-    at = value['additional_time']
-    dt = datetime.timedelta(hours=at.hour, minutes=at.minute, seconds=at.second).total_seconds()
-
-    return int(coef * duration) + int(dt)
-
-
-def total_person_load(value):
-    duration_with_coef = human_readable_time(value // 60)
-    return str(duration_with_coef)
+def get_duration_with_coef(duration: datetime.timedelta,
+                           additional_time: datetime.time,
+                           time_coef: Decimal) -> datetime.timedelta:
+    add_time = datetime.timedelta(hours=additional_time.hour,
+                                  minutes=additional_time.minute,
+                                  seconds=additional_time.second)
+    return datetime.timedelta(seconds=int(duration.total_seconds()) * float(time_coef)) + add_time
 
 
-def date_transform(value):
+def date_transform(value, duration, duration_with_coef):
     """
     Формирование строки с временем начала и конца активности,
     продолжительности и продолжительности с учетом коэффициента
     """
     start = value['start_dt']
     end = value['end_dt']
-    duration = human_readable_time(value['duration'] // 60)
-    duration_with_coef = human_readable_time(value['duration_with_coef'] // 60)
+    duration = human_readable_time(int(duration.total_seconds()) // 60)
+    duration_with_coef = human_readable_time(int(duration_with_coef.total_seconds()) // 60)
 
-    return f"{start.strftime('%d.%m %H:%M')} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
+    return f"{start.strftime(dt_format)} - {end.strftime('%H:%M')} ({duration} - {duration_with_coef})"
 
 
 def human_readable_time(value):
@@ -72,25 +92,6 @@ def human_readable_time(value):
     else:
         value = f"{value} мин."
     return value
-
-
-def replace_person_status(value):
-    if value == 1:
-        return 'Участвует'
-    elif value == -1:
-        return 'Недоступен'
-    return 'Доступен'
-
-
-def highlight(s):
-    """
-    Возвращает CSS-свойство для заливки фона, в зависимости от содержимого ячейки
-    """
-    if s == 'Участвует':
-        return "background: #00FA9A"
-    elif s == 'Недоступен':
-        return "background: #FA8072"
-    return None
 
 
 def is_intersects(start_dt, end_dt, activity, checked_activity):
@@ -109,13 +110,6 @@ def is_intersects(start_dt, end_dt, activity, checked_activity):
     if overlap > 0 and checked_activity != activity and checked_activity.pk != activity.pk:
         return True
     return False
-
-
-class Act:
-    def __init__(self, start_dt, end_dt, pk: int):
-        self.pk = pk
-        self.start_dt = start_dt
-        self.end_dt = end_dt
 
 
 def create_google_calendar_format_schedule(activities):

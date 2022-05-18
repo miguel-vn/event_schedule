@@ -6,8 +6,8 @@ from schedule_app import forms, models
 @admin.display(description='Категории')
 class CategoryAdmin(admin.ModelAdmin):
     form = forms.CategoryForm
-    list_display = ('name', 'work_with_peoples', 'time_coefficient', 'additional_time')
-    list_filter = ('work_with_peoples',)
+    list_display = ('name', 'activity_type', 'work_with_peoples', 'time_coefficient', 'additional_time')
+    list_filter = ('work_with_peoples', 'activity_type')
 
 
 @admin.display(description='Типы активностей')
@@ -23,7 +23,7 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
     #  с учетом коэффициента категории и доп. времени в ней
     form = forms.ActivityOnEventForm
     list_display = ('activity', 'get_activity_type', 'event', 'start_dt', 'end_dt', 'duration')
-    list_filter = ('event', 'activity__activity_type', 'activity', 'person')
+    list_filter = ('event', 'activity__category__activity_type', 'activity', 'person')
     save_as = True
 
     @staticmethod
@@ -38,20 +38,19 @@ class ActivityOnEventAdmin(admin.ModelAdmin):
 
     @admin.display(description='Тип')
     def get_activity_type(self, obj):
-        return obj.activity.activity_type
+        return obj.activity.category.activity_type
 
 
 @admin.display(description='Активности')
 class ActivityAdmin(admin.ModelAdmin):
     form = forms.ActivityForm
-    list_display = ('name', 'category')
+    list_display = ('name', 'category', 'get_activity_type')
 
-    list_filter = ('category',)
+    list_filter = ('category', 'category__activity_type')
 
-
-# class ActivitiesInline(admin.TabularInline):
-#     model = models.ActivityOnEvent
-#     readonly_fields = ('event',)
+    @admin.display(description='Тип')
+    def get_activity_type(self, obj):
+        return obj.category.activity_type
 
 
 @admin.display(description='Люди')
@@ -59,14 +58,11 @@ class PersonAdmin(admin.ModelAdmin):
     form = forms.PersonForm
     list_display = ('first_name', 'last_name')
 
-    # inlines = [ActivitiesInline]
-
 
 @admin.display(description='Мероприятия')
 class EventAdmin(admin.ModelAdmin):
     form = forms.EventForm
     list_display = ('title', 'start_date', 'end_date')
-    # inlines = [ActivitiesInline]
 
 
 admin.site.register(models.Category, CategoryAdmin)
@@ -75,13 +71,3 @@ admin.site.register(models.Activity, ActivityAdmin)
 admin.site.register(models.Person, PersonAdmin)
 admin.site.register(models.Event, EventAdmin)
 admin.site.register(models.ActivityOnEvent, ActivityOnEventAdmin)
-
-"""
-    @admin.display(description='Доступное свободное время')
-    def available_free_time(self):
-        activities_sum = datetime.timedelta(0)
-        activities_len = [act['end_dt'] - act['start_dt'] for act in self.activities.values()]
-        for act in activities_len:
-            activities_sum += act
-        return self.free_time_limit - activities_sum
-"""

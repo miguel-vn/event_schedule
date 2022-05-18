@@ -33,6 +33,55 @@
     </li>
 </ul>
 <div class="d-flex flex-nowrap">
-    {{ table_content | safe }}
+    <table class="table table-bordered">
+        <thead style="background-color:white;position: sticky;position: -webkit-sticky;left: 0;top: 23px;z-index: 3;">
+        <tr>
+            <th class="blank">&nbsp;</th>
+            <th>Время</th>
+            {% for row in table_headers.activity_dt %}
+            <th class="text-nowrap">{{ row }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            <th class="blank">&nbsp;</th>
+            <th>Активность</th>
+            {% for row in table_headers.activity_name %}
+            <th class="text-nowrap">{{ row }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            <th class="blank">&nbsp;</th>
+            <th>Наполнение</th>
+            {% for row in table_headers.need_peoples %}
+            <th class="text-nowrap"
+                style="background-color: {% if 'Требуется' in row %}#FFD700{% else %}#00FA9A{% endif %} !important">
+                {{ row | safe }}
+            </th>
+            {% endfor %}
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <th class="blank">&nbsp;</th>
+            <th class="blank">&nbsp;</th>
+            {% for row in table_headers.activity_name %}
+            <th>&nbsp;</th>
+            {% endfor %}
+        </tr>
+        {% for person, data in persons.items %}
+        <tr>
+            <th style="background-color:white;position: sticky;position: -webkit-sticky;left: 0;top: 23px;z-index: 3;">
+                {{ person | safe }}
+            </th>
+            <th>{{ data.duration_full }}</th>
+            {% for value in data.status %}
+            <td style="background-color: {% if value == 'Участвует' %}#00FA9A{% elif value == 'Недоступен'%}#FA8072{% endif %} !important">
+                {{ value }}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}
