@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{{ object.name }}
+{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <br>
+            <a href="{% url 'events' %}">Назад к списку эвентов</a>
+            <br>
+            <h1 class="display-6">{{ object.name }}</h1>
+            <br>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <h6 class="card-subtitle mb-2">Требуется людей: {{ object.need_peoples }}</h6>
+            <br>
+            <h6 class="card-subtitle mb-2">Категория: {{ object.category.name }}</h6>
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Тип: {{ object.category.activity_type.get_name_display }}</h6>
+                    <h6 class="card-subtitle mb-2">Работа с людьми:
+                        {% if object.category.work_with_peoples %}Да{% else %}Нет{% endif %}</h6>
+                    <h6 class="card-subtitle mb-2">Временной коэффициент: {{ object.category.time_coefficient }}</h6>
+                    <h6 class="card-subtitle mb-2">Добавочное время: {{ object.category.additional_time }}</h6>
+                </div>
+            </div>
+            <br>
+            <h6 class="card-subtitle mb-2">Описание:</h6>
+            <p class="card-text">{% if object.description %}{{ object.description }}{% else %}Отсутствует{% endif %}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

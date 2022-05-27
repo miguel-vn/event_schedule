@@ -1,7 +1,3 @@
-import datetime
-from collections import namedtuple
-from decimal import Decimal
-
 import pandas as pd
 from django.shortcuts import reverse
 
@@ -55,19 +51,6 @@ def create_url_for_person(event, person):
     return f'<a href="{person_url}">{person.last_name} {person.first_name}</a>'
 
 
-def get_duration(value: dict) -> datetime.timedelta:
-    return datetime.timedelta(seconds=int((value['end_dt'] - value['start_dt']).total_seconds()))
-
-
-def get_duration_with_coef(duration: datetime.timedelta,
-                           additional_time: datetime.time,
-                           time_coef: Decimal) -> datetime.timedelta:
-    add_time = datetime.timedelta(hours=additional_time.hour,
-                                  minutes=additional_time.minute,
-                                  seconds=additional_time.second)
-    return datetime.timedelta(seconds=int(duration.total_seconds()) * float(time_coef)) + add_time
-
-
 def date_transform(value, duration, duration_with_coef):
     """
     Формирование строки с временем начала и конца активности,
@@ -92,24 +75,6 @@ def human_readable_time(value):
     else:
         value = f"{value} мин."
     return value
-
-
-def is_intersects(start_dt, end_dt, activity, checked_activity):
-    Range = namedtuple('Range', ['start', 'end'])
-
-    r1 = Range(start=start_dt, end=end_dt)
-    r2 = Range(start=activity.start_dt, end=activity.end_dt)
-    if r1.start > r2.end or r1.end < r2.start:
-        return False
-
-    latest_start = max(r1.start, r2.start)
-    earliest_end = min(r1.end, r2.end)
-    delta = ((earliest_end - latest_start).total_seconds() // 60) % 60
-
-    overlap = max(0, delta)
-    if overlap > 0 and checked_activity != activity and checked_activity.pk != activity.pk:
-        return True
-    return False
 
 
 def create_google_calendar_format_schedule(activities):

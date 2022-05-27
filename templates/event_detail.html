@@ -46,7 +46,7 @@
             <th class="blank">&nbsp;</th>
             <th>Активность</th>
             {% for row in table_headers.activity_name %}
-            <th class="text-nowrap">{{ row }}</th>
+            <th class="text-nowrap"><a href="{% url 'activity_detail' pk=row.pk %}">{{ row }}</a></th>
             {% endfor %}
         </tr>
         <tr>
@@ -71,12 +71,41 @@
         {% for person, data in persons.items %}
         <tr>
             <th style="background-color:white;position: sticky;position: -webkit-sticky;left: 0;top: 23px;z-index: 3;">
-                {{ person | safe }}
+                <a href="{% url 'person' event_pk=event.pk person_pk=person.pk%}">
+                    {{ person.last_name }} {{person.first_name }}</a>
             </th>
             <th>{{ data.duration_full }}</th>
             {% for value in data.status %}
-            <td style="background-color: {% if value == 'Участвует' %}#00FA9A{% elif value == 'Недоступен'%}#FA8072{% endif %} !important">
+            <td class="align-middle text-center"
+                style="background-color: {% if value.0 == 'Участвует' %}#198754{% elif value == 'Недоступен'%}#FA8072{% endif %} !important">
+                {% if value.0 in 'Участвует,Доступен' %}
+                <a href="{% url 'person_replace' %}?aoe={{value.1}}&event={{event.pk}}&person={{person.pk}}&action_type={% if value.0 == 'Доступен'%}add{% else %}del{% endif %}">
+                    <button type="submit" class="btn {% if value.0 == 'Доступен'%}btn-success{% else %}btn-light{% endif %}">
+                        {% if value.0 == 'Доступен'%}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                             class="bi bi-plus-lg" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                  d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
+                        </svg>
+                        {% else %}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                             class="bi bi-dash-lg" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8Z"/>
+                        </svg>
+                        {% endif %}
+                    </button>
+                </a>
+                {% elif value == 'Недоступен' %}
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg"
+                     viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                          d="M13.854 2.146a.5.5 0 0 1 0 .708l-11 11a.5.5 0 0 1-.708-.708l11-11a.5.5 0 0 1 .708 0Z"/>
+                    <path fill-rule="evenodd"
+                          d="M2.146 2.146a.5.5 0 0 0 0 .708l11 11a.5.5 0 0 0 .708-.708l-11-11a.5.5 0 0 0-.708 0Z"/>
+                </svg>
+                {% else %}
                 {{ value }}
+                {% endif %}
             </td>
             {% endfor %}
         </tr>

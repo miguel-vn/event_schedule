@@ -5,7 +5,6 @@ from django.forms import ModelForm
 
 import schedule_app.constants as const
 from schedule_app import models
-from schedule_app.utils import is_intersects, get_duration_with_coef
 
 
 class CategoryForm(ModelForm):
@@ -65,12 +64,10 @@ def check_person_incoming_dates(cleaned_data, person):
 
 
 def check_intersections(cleaned_data, person, existing_instance):
-    start_dt = cleaned_data.get('start_dt')
-    end_dt = cleaned_data.get('end_dt')
     activities = person.get_schedule(cleaned_data.get('event').pk)
 
     for act in activities:
-        if is_intersects(start_dt, end_dt, act, existing_instance):
+        if existing_instance.is_intersects(act):
             act_detail = f'{act.activity.name} ({act.start_dt.strftime("%H:%M:%S")} - ' \
                          f'{act.end_dt.strftime("%H:%M:%S")})'
             raise ValidationError({
@@ -84,18 +81,14 @@ def check_free_time_limit(cleaned_data, person):
     end_dt = cleaned_data.get('end_dt')
     activities = person.get_schedule(cleaned_data.get('event').pk, const.VOLUNTEER)
 
-    time_params = {'duration': end_dt - start_dt,
-                   'time_coef': float(cleaned_data.get('activity').category.time_coefficient),
-                   'additional_time': cleaned_data.get('activity').category.additional_time}
-
-    activities_sum = get_duration_with_coef(**time_params)
+    new = models.ActivityOnEvent(event=cleaned_data.get('event'),
+                                 activity=cleaned_data.get('activity'),
+                                 start_dt=start_dt,
+                                 end_dt=end_dt)
+    activities_sum = new.duration_with_coef()
 
     for act in activities:
-        time_params = {'duration': act.duration(),
-                       'time_coef': float(act.activity.category.time_coefficient),
-                       'additional_time': act.activity.category.additional_time}
-
-        activities_sum += get_duration_with_coef(**time_params)
+        activities_sum += act.duration_with_coef()
 
     if activities_sum > person.free_time_limit:
         raise ValidationError({'start_dt': 'Недостаточно свободного времени'})
@@ -120,7 +113,7 @@ class ActivityOnEventForm(ModelForm):
         persons = self.cleaned_data.get('person')
         for p in persons:
             check_excluded_categories(self.cleaned_data, p)
-            if self.cleaned_data.get('activity').activity_type.name == const.VOLUNTEER:
+            if self.cleaned_data.get('activity').category.activity_type.name == const.VOLUNTEER:
                 check_free_time_limit(self.cleaned_data, p)
             check_intersections(self.cleaned_data, p, self.instance)
 

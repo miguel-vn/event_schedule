@@ -28,12 +28,12 @@
            href="{% url 'official_schedule' pk=event.pk %}">Официальное расписание</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link {% if current_page == 'other_schedule' %}active{% endif %}" aria-current="page"
+        <a class="nav-link {% if current_page == 'other' %}active{% endif %}" aria-current="page"
            href="{% url 'other_schedule' pk=event.pk %}">Прочее расписание</a>
     </li>
 </ul>
 <div class="container">
-    {% if table_content %}
+    {% if object_list %}
     <table class="table">
         <thead>
         <tr>
@@ -44,15 +44,15 @@
         </tr>
         </thead>
         <tbody>
-        {% for row in table_content %}
+        {% for row in object_list %}
         <tr>
             <th scope="row">{{ row.activity }}</th>
             <td>{{ row.start_dt }}</td>
             <td>{{ row.end_dt }}</td>
             <td>
                 <ul>
-                    {% for person in row.persons %}
-                    <li>{{ person }}</li>
+                    {% for person in row.person.all %}
+                    <li>{{ person.get_full_name }}</li>
                     {% endfor %}
                 </ul>
             </td>

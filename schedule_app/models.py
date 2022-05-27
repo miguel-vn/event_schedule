@@ -1,11 +1,6 @@
-"""
-Исходник
-https://docs.google.com/spreadsheets/d/1CO-mvJSt_Ui-_qv7TGWlQpMzzsw3gGVhwZj512HxaRU/edit#gid=1175281723
-"""
-
 import datetime
+from collections import namedtuple
 
-from django.contrib import admin
 from django.db import models
 
 import schedule_app.constants as const
@@ -22,8 +17,8 @@ class ActivityType(models.Model):
         verbose_name = 'Тип деятельности'
         verbose_name_plural = 'Типы деятельности'
 
-    def get_events(self, pk):
-        return ActivityOnEvent.objects.filter(event__pk=pk, activity__activity_type=self)
+    def get_schedule(self, pk):
+        return ActivityOnEvent.objects.filter(event__pk=pk, activity__category__activity_type=self)
 
     def __str__(self):
         return self.get_name_display()
@@ -88,7 +83,7 @@ class Person(models.Model):
         return f'{self.first_name} {self.last_name}'
 
     def get_full_name(self):
-        return f'{self.first_name} {self.last_name}'
+        return f'{self.last_name} {self.first_name}'
 
     def get_schedule(self, event_pk, activity_type=None):
         if not activity_type:
@@ -130,12 +125,34 @@ class ActivityOnEvent(models.Model):
         verbose_name = 'Расписание активностей'
         verbose_name_plural = 'Расписание активностей'
 
-    @admin.display(description='Продолжительность')
-    def duration(self):
-        if self.start_dt and self.end_dt:
-            return self.end_dt - self.start_dt
-        else:
-            return None
+    def duration(self) -> datetime.timedelta:
+        return self.end_dt - self.start_dt
+
+    def duration_with_coef(self) -> datetime.timedelta:
+        dt = self.activity.category.additional_time
+        at = datetime.timedelta(hours=dt.hour, minutes=dt.minute, seconds=dt.second).total_seconds()
+        seconds = self.duration().total_seconds() * float(self.activity.category.time_coefficient) + at
+
+        return datetime.timedelta(seconds=int(seconds))
+
+    def is_intersects(self, another_act):
+        if another_act == self:
+            return False
+        Range = namedtuple('Range', ['start', 'end'])
+
+        r1 = Range(start=self.start_dt, end=self.end_dt)
+        r2 = Range(start=another_act.start_dt, end=another_act.end_dt)
+        if r1.start > r2.end or r1.end < r2.start:
+            return False
+
+        latest_start = max(r1.start, r2.start)
+        earliest_end = min(r1.end, r2.end)
+        delta = ((earliest_end - latest_start).total_seconds() // 60) % 60
+
+        overlap = max(0, delta)
+        if overlap > 0:
+            return True
+        return False
 
     def __str__(self):
         return f'{self.activity.name} ({self.start_dt} - {self.end_dt})'

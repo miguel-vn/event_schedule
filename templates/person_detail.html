@@ -34,7 +34,7 @@
             </div>
         </div>
         <div class="col">
-            {% if table_content %}
+            {% if object_list %}
             <table class="table">
                 <thead>
                 <tr>
@@ -44,7 +44,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for row in table_content %}
+                {% for row in object_list %}
                 <tr>
                     <th scope="row">{{ row.activity }}</th>
                     <td>{{ row.start_dt }}</td>
